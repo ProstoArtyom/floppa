@@ -99,6 +99,7 @@ StyleCopReport.xml
 *.scc
 
 # Files built by Codeblock
+src.cbp
 src.depend
 src.layout
 
