@@ -231,7 +231,7 @@ int EdgesSolution()
     }
 
     int WConf = 0;
-    priority_queue<array<long double, 3>> pr;
+    priority_queue<array<int, 3>> pr;
 
     for (int i = 0; i < n; i++)
     {

@@ -99,7 +99,8 @@ StyleCopReport.xml
 *.scc
 
 # Files built by Codeblock
-*.depend
+src.depend
+src.layout
 
 # Chutzpah Test files
 _Chutzpah*
