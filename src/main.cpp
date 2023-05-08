@@ -176,7 +176,49 @@ int SetPrColor(int v1, int v2)
     return dif;
 }
 
-void EdgesSolution()
+int ImproveVertix(int v1)
+{
+    int CurColorWeight[4] = {};
+    for (int v : G[v1])
+    {
+        CurColorWeight[Color[v]] += Weight[v1][v];
+    }
+
+    int cv1, mn = 1e9;
+
+    cout << "For " << Color[v1] << endl;
+
+    for (int i = 1; i < 4; i++)
+    {
+        if (CurColorWeight[i] < mn)
+        {
+            cv1 = i;
+            mn = CurColorWeight[i];
+        }
+        cout << i << " Color " << CurColorWeight[i] << endl;
+    }
+
+    CurColorWeight[0] = 0;
+    int dif = mn - CurColorWeight[Color[v1]];
+
+    Color[v1] = cv1;
+
+    return dif;
+}
+
+void ImproveSolution(int WConf, int *Colors = Color) // No sence
+{
+    cout << "BEFORE " << WConf << endl;
+    for (int i = 0; i < n; i++)
+    {
+        WConf += ImproveVertix(i);
+    }
+    cout << "AFTER " << WConf << endl;
+
+    TrySetAns(CalcScore(WConf));
+}
+
+int EdgesSolution()
 {
     if (DEBUG)
     {
@@ -215,6 +257,8 @@ void EdgesSolution()
         cout << "Solution score: " << score << endl;
         cout << "Total Weight = " << TotalWeight << ", Conflict Weight = " << WConf << endl;
     }
+
+    return score;
 }
 
 void RandSolution()
@@ -232,13 +276,15 @@ int main()
 {
     if (DEBUG || TEST)
     {
-        freopen("../tests/1.in", "r", stdin);
+        freopen("../tests/10.in", "r", stdin);
     }
 
     ExecTimePoint = std::chrono::steady_clock::now() + std::chrono::milliseconds(ExecTime); // setting a timer
 
     Input();
     // TODO add start ans values
+
+
     if (UseEdgesSolution)
     {
         EdgesSolution();
