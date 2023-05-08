@@ -156,19 +156,19 @@ int SetPrColor(int v1, int v2)
     {
         for (int j = 1; j < 4; j++)
         {
-            if ((i != j && CurColorWeight[0][i] + CurColorWeight[1][j] < mn) || (i == j && CurColorWeight[0][i] + CurColorWeight[1][j] + Weight[v1][v2] < mn))
+            int cur = CurColorWeight[0][i] + CurColorWeight[1][j] + ((i == j)? (Weight[v1][v2]) : (0));
+            if (cur < mn)
             {
                 cv1 = i;
                 cv2 = j;
-                mn = (i == j)? (CurColorWeight[0][i] + CurColorWeight[1][j] + Weight[v1][v2]) : (CurColorWeight[0][i] + CurColorWeight[1][j]);
+                mn = cur;
             }
         }
     }
 
     CurColorWeight[0][0] = 0;
     CurColorWeight[1][0] = 0;
-    int cur = (Color[v1] == Color[v2] && Color[v1] != 0)? (CurColorWeight[0][Color[v1]] + CurColorWeight[1][Color[v2]] + Weight[v1][v2]) : (CurColorWeight[0][Color[v1]] + CurColorWeight[1][Color[v2]]);
-    int dif = mn - cur;
+    int dif = mn - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
 
     Color[v1] = cv1;
     Color[v2] = cv2;
