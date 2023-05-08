@@ -14,7 +14,7 @@ int TotalWeight, TotalScore;
 std::chrono::steady_clock::time_point ExecTimePoint;
 
 
-bool const DEBUG = true, TEST = true, ADVANCED = false;
+bool const DEBUG = false, TEST = false, ADVANCED = false;
 bool const UseEdgesSolution = true, UseRandSolution = false;
 
 
@@ -225,15 +225,20 @@ int EdgesSolution()
         cout << "EdgesSolution: " << endl;
     }
 
+    for (int i = 0; i < n; i++)
+    {
+        Color[i] = 0;
+    }
+
     int WConf = 0;
-    priority_queue<array<int, 3>> pr;
+    priority_queue<array<long double, 3>> pr;
 
     for (int i = 0; i < n; i++)
     {
         for (int v : G[i])
         {
             //pr.push({Weight[i][v], i, v});
-            pr.push({Weight[i][v], i, v});
+            pr.push({((long double)Weight[i][v] / TotalWeight) * rand(), i, v});
         }
     }
 
@@ -276,7 +281,7 @@ int main()
 {
     if (DEBUG || TEST)
     {
-        freopen("../tests/10.in", "r", stdin);
+        freopen("../tests/20.in", "r", stdin);
     }
 
     ExecTimePoint = std::chrono::steady_clock::now() + std::chrono::milliseconds(ExecTime); // setting a timer
@@ -287,7 +292,10 @@ int main()
 
     if (UseEdgesSolution)
     {
-        EdgesSolution();
+        while (true)
+        {
+            EdgesSolution();
+        }
     }
 
     if (UseRandSolution)
