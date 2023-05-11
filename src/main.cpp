@@ -1,9 +1,8 @@
 #include <bits/stdc++.h>
-//#pragma GCC optimization("Ofast")
 
 using namespace std;
 
-int const N = 7005, M = 70005;
+int const N = 7005, M = 70005, H = M * 2;
 int const ExecTime = 950;
 
 int Color[N];
@@ -11,14 +10,17 @@ vector<int> G[N];
 int Weight[N][N];
 int TotalWeight, TotalScore;
 
+pair<int, int> edges[H];
+int perm[H];
+
 std::chrono::steady_clock::time_point ExecTimePoint;
 
 
 bool const DEBUG = false, TEST = false, ADVANCED = false;
-bool const UseEdgesSolution = true, UseRandSolution = false;
+bool const UseEdgesSolution = true;
 
 
-int n, m;
+int n, m, h;
 int ans[N];
 
 void CheckTime();
@@ -30,13 +32,14 @@ long double F(int x)
 
 int CalcScore(int WConf)
 {
+    //return 1e9 - WConf;
     return (int)(log2(n)) * 100000 * (F(TotalWeight) - F(WConf)) / (F(TotalWeight) - F(0));
 }
 
 int CalcScore(int *Colors)
 {
     int WConf = 0;
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; ++i)
     {
         for (int v : G[i])
         {
@@ -62,7 +65,8 @@ int CalcScore(int *Colors)
 void Input()
 {
     cin >> n >> m;
-    for (int i = 0; i < m; i++)
+    h = 2 * m;
+    for (int i = 0; i < m; ++i)
     {
         int v1, v2, w;
         cin >> v1 >> v2 >> w;
@@ -70,17 +74,20 @@ void Input()
         G[v2].push_back(v1);
         Weight[v1][v2] = w;
         Weight[v2][v1] = w;
+        edges[i] = {v1, v2};
+        edges[m + i] = {v2, v1};
         TotalWeight += w;
     }
 }
 
 void Output()
 {
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; ++i)
     {
         cout << ans[i] << ' ';
     }
     cout << '\n';
+
     if (DEBUG)
     {
         cout << "ANSWER RESULT: " << endl;
@@ -103,7 +110,7 @@ bool TrySetAns(int score, int *Colors = Color)
     if (score > TotalScore)
     {
         TotalScore = score;
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; ++i)
         {
             ans[i] = Colors[i];
         }
@@ -113,27 +120,83 @@ bool TrySetAns(int score, int *Colors = Color)
     return false;
 }
 
-void SetRColor(int v1, int v2)
+int SetSColor(int v1, int v2)
 {
-    if (!Color[v1])
+    int CurColorWeight[2][4] = {};
+    for (int v : G[v1])
     {
-        Color[v1] = rand() % 3 + 1;
+        if (v != v2)
+        {
+            CurColorWeight[0][Color[v]] += Weight[v1][v];
+        }
+    }
+    for (int v : G[v2])
+    {
+        if (v != v1)
+        {
+            CurColorWeight[1][Color[v]] += Weight[v2][v];
+        }
     }
 
-    if (!Color[v2])
-    {
-        Color[v2] = (Color[v1] + rand() % 2) % 3 + 1;
-    }
+    int cv1 = rand() % 3 + 1;
+    int cv2 = cv1;
+
+    CurColorWeight[0][0] = 0;
+    CurColorWeight[1][0] = 0;
+    int dif = CurColorWeight[0][cv1] + CurColorWeight[1][cv2] + ((cv1 == cv2 && cv1 != 0)? (Weight[v1][v2]) : (0)) - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
+
+    Color[v1] = cv1;
+    Color[v2] = cv2;
 
     if (DEBUG && ADVANCED)
     {
         cout << "COLOR SET: " << endl;
         cout << v1 << ' ' << v2 << ' ' << Color[v1] << ' ' << Color[v2] << endl;
     }
+
+    return dif;
+}
+
+int SetRColor(int v1, int v2)
+{
+    int CurColorWeight[2][4] = {};
+    for (int v : G[v1])
+    {
+        if (v != v2)
+        {
+            CurColorWeight[0][Color[v]] += Weight[v1][v];
+        }
+    }
+    for (int v : G[v2])
+    {
+        if (v != v1)
+        {
+            CurColorWeight[1][Color[v]] += Weight[v2][v];
+        }
+    }
+
+    int cv1 = (Color[v1])? (Color[v1]) : (rand() % 3 + 1);
+    int cv2 = (Color[v2])? (Color[v2]) : ((cv1 + rand() % 2) % 3 + 1);
+
+    CurColorWeight[0][0] = 0;
+    CurColorWeight[1][0] = 0;
+    int dif = CurColorWeight[0][cv1] + CurColorWeight[1][cv2] + ((cv1 == cv2 && cv1 != 0)? (Weight[v1][v2]) : (0)) - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
+
+    Color[v1] = cv1;
+    Color[v2] = cv2;
+
+    if (DEBUG && ADVANCED)
+    {
+        cout << "COLOR SET: " << endl;
+        cout << v1 << ' ' << v2 << ' ' << Color[v1] << ' ' << Color[v2] << endl;
+    }
+
+    return dif;
 }
 
 int SetPrColor(int v1, int v2)
 {
+    vector<pair<int, int>> best;
     int CurColorWeight[2][4] = {};
     for (int v : G[v1])
     {
@@ -152,23 +215,23 @@ int SetPrColor(int v1, int v2)
 
     int cv1, cv2, mn = 1e9;
 
-    for (int i = 1; i < 4; i++)
+    for (int i = 1; i < 4; ++i)
     {
-        for (int j = 1; j < 4; j++)
+        for (int j = 1; j < 4; ++j)
         {
             int cur = CurColorWeight[0][i] + CurColorWeight[1][j] + ((i == j)? (Weight[v1][v2]) : (0));
             if (cur < mn)
             {
+                mn = cur;
                 cv1 = i;
                 cv2 = j;
-                mn = cur;
             }
         }
     }
 
     CurColorWeight[0][0] = 0;
     CurColorWeight[1][0] = 0;
-    int dif = mn - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
+    int dif = CurColorWeight[0][cv1] + CurColorWeight[1][cv2] + ((cv1 == cv2)? (Weight[v1][v2]) : (0)) - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
 
     Color[v1] = cv1;
     Color[v2] = cv2;
@@ -176,46 +239,41 @@ int SetPrColor(int v1, int v2)
     return dif;
 }
 
-int ImproveVertix(int v1)
+#define MRAND_MAX 32767 * 2
+
+static unsigned long int mnext = 1;
+
+int mrand()
 {
-    int CurColorWeight[4] = {};
-    for (int v : G[v1])
-    {
-        CurColorWeight[Color[v]] += Weight[v1][v];
-    }
-
-    int cv1, mn = 1e9;
-
-    cout << "For " << Color[v1] << endl;
-
-    for (int i = 1; i < 4; i++)
-    {
-        if (CurColorWeight[i] < mn)
-        {
-            cv1 = i;
-            mn = CurColorWeight[i];
-        }
-        cout << i << " Color " << CurColorWeight[i] << endl;
-    }
-
-    CurColorWeight[0] = 0;
-    int dif = mn - CurColorWeight[Color[v1]];
-
-    Color[v1] = cv1;
-
-    return dif;
+  mnext = mnext * 1103515245 + 12345;
+  return (unsigned int)(mnext/65536) % (MRAND_MAX + 1);
 }
 
-void ImproveSolution(int WConf, int *Colors = Color) // No sence
-{
-    cout << "BEFORE " << WConf << endl;
-    for (int i = 0; i < n; i++)
-    {
-        WConf += ImproveVertix(i);
-    }
-    cout << "AFTER " << WConf << endl;
+int permSize;
 
-    TrySetAns(CalcScore(WConf));
+void resizePerm(int sz)
+{
+    permSize = sz;
+    for (int i = 0; i < sz; i++)
+    {
+        perm[i] = i;
+    }
+}
+
+void generatePerm()
+{
+    for (int i = permSize - 1; i >= 0; i--)
+    {
+        int j = mrand() % (i + 1);
+
+        swap(perm[i], perm[j]);
+    }
+}
+
+int getCostValue(int w)
+{
+    //return ((long double)w / TotalWeight) * rand();
+    return rand();
 }
 
 int EdgesSolution()
@@ -225,37 +283,30 @@ int EdgesSolution()
         cout << "EdgesSolution: " << endl;
     }
 
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; ++i)
     {
         Color[i] = 0;
     }
 
     int WConf = 0;
-    priority_queue<array<int, 3>> pr;
 
-    for (int i = 0; i < n; i++)
+    int score;
+
+    resizePerm(h);
+
+    for (int l = 0; l < 2; l++)
     {
-        for (int v : G[i])
-        {
-            //pr.push({Weight[i][v], i, v});
-            pr.push({((long double)Weight[i][v] / TotalWeight) * rand(), i, v});
-        }
-    }
+        generatePerm();
 
-    while (!pr.empty())
-    {
-        if (DEBUG && ADVANCED)
+        for (int i = 0; i < h; i++)
         {
-            cout << "priority cur: " << endl;
-            cout << pr.top()[0] << ' ' << pr.top()[1] << ' ' << pr.top()[2] << endl;
+            WConf += SetPrColor(edges[perm[i]].first, edges[perm[i]].second);
+            CheckTime();
         }
-        WConf += SetPrColor(pr.top()[1], pr.top()[2]);
-        CheckTime(); // 70+ ms
-        pr.pop();
-    }
 
-    int score = CalcScore(WConf);
-    TrySetAns(score);
+        score = CalcScore(WConf);
+        TrySetAns(score);
+    }
 
     if (DEBUG)
     {
@@ -266,19 +317,10 @@ int EdgesSolution()
     return score;
 }
 
-void RandSolution()
-{
-    for (int i = 0; i < n; i++)
-    {
-        Color[i] = rand() % 3 + 1;
-    }
-
-    TrySetAns(CalcScore(Color));
-    CheckTime();
-}
-
 int main()
 {
+    ios_base::sync_with_stdio(false);
+    cin.tie(NULL);
     if (DEBUG || TEST)
     {
         freopen("../tests/20.in", "r", stdin);
@@ -287,8 +329,10 @@ int main()
     ExecTimePoint = std::chrono::steady_clock::now() + std::chrono::milliseconds(ExecTime); // setting a timer
 
     Input();
-    // TODO add start ans values
-
+    for (int i = 0; i < n; ++i)
+    {
+        ans[i] = rand() % 3 + 1;
+    }
 
     if (UseEdgesSolution)
     {
@@ -298,13 +342,6 @@ int main()
         }
     }
 
-    if (UseRandSolution)
-    {
-        while (true)
-        {
-            RandSolution();
-        }
-    }
     Output();
 
     return 0;
