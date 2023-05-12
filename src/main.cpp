@@ -17,7 +17,7 @@ std::chrono::steady_clock::time_point ExecTimePoint;
 
 
 bool const DEBUG = false, TEST = false, ADVANCED = false;
-bool const UseEdgesSolution = true;
+bool const UseEdgesDefaultSolution = true, UseEdgesHighDegreeSolution = true;
 
 
 int n, m, h;
@@ -196,7 +196,6 @@ int SetRColor(int v1, int v2)
 
 int SetPrColor(int v1, int v2)
 {
-    vector<pair<int, int>> best;
     int CurColorWeight[2][4] = {};
     for (int v : G[v1])
     {
@@ -239,6 +238,22 @@ int SetPrColor(int v1, int v2)
     return dif;
 }
 
+int SetColor(int v1, int cv1 = 0)
+{
+    int CurColorWeight[4] = {};
+    for (int v : G[v1])
+    {
+        CurColorWeight[Color[v]] += Weight[v1][v];
+    }
+
+    CurColorWeight[0] = 0;
+    int dif = CurColorWeight[cv1] - CurColorWeight[Color[v1]];
+
+    Color[v1] = cv1;
+
+    return dif;
+}
+
 #define MRAND_MAX 32767 * 2
 
 static unsigned long int mnext = 1;
@@ -276,45 +291,56 @@ int getCostValue(int w)
     return rand();
 }
 
-int EdgesSolution()
+void EdgesHighDegreeSolution(int len)
 {
-    if (DEBUG)
-    {
-        cout << "EdgesSolution: " << endl;
-    }
-
-    for (int i = 0; i < n; ++i)
-    {
-        Color[i] = 0;
-    }
+    memset(Color, 0, sizeof(int) * n);
 
     int WConf = 0;
 
-    int score;
+    for (int l = 0; l < len; ++l)
+    {
+        //generatePerm();
+        priority_queue<pair<int, int>> pr;
 
-    resizePerm(h);
+        for (int i = 0; i < h; ++i)
+        {
+            pr.push({G[edges[i].first].size() + G[edges[i].second].size(), i});
+        }
 
-    for (int l = 0; l < 2; l++)
+        for (int i = 0; i < h; ++i)
+        {
+            WConf += SetPrColor(edges[pr.top().second].first, edges[pr.top().second].second);
+            CheckTime();
+            pr.pop();
+        }
+
+        TrySetAns(CalcScore(WConf));
+
+        for (int i = n / 2; i >= 0; i--)
+        {
+            WConf += SetColor(rand() % n);
+        }
+    }
+}
+
+void EdgesDefaultSolution()
+{
+    memset(Color, 0, sizeof(int) * n);
+
+    int WConf = 0;
+
+    for (int l = 0; l < 2; ++l)
     {
         generatePerm();
 
-        for (int i = 0; i < h; i++)
+        for (int i = 0; i < h; ++i)
         {
             WConf += SetPrColor(edges[perm[i]].first, edges[perm[i]].second);
             CheckTime();
         }
 
-        score = CalcScore(WConf);
-        TrySetAns(score);
+        TrySetAns(CalcScore(WConf));
     }
-
-    if (DEBUG)
-    {
-        cout << "Solution score: " << score << endl;
-        cout << "Total Weight = " << TotalWeight << ", Conflict Weight = " << WConf << endl;
-    }
-
-    return score;
 }
 
 int main()
@@ -334,11 +360,16 @@ int main()
         ans[i] = rand() % 3 + 1;
     }
 
-    if (UseEdgesSolution)
+    if (UseEdgesHighDegreeSolution)
+    {
+        EdgesHighDegreeSolution(20);
+    }
+    if (UseEdgesDefaultSolution)
     {
         while (true)
         {
-            EdgesSolution();
+            resizePerm(h);
+            EdgesDefaultSolution();
         }
     }
 
