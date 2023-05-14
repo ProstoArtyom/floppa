@@ -3,7 +3,6 @@
 using namespace std;
 
 int const N = 7005, M = 70005, H = M * 2;
-int const ExecTime = 950;
 
 int Color[N];
 vector<int> G[N];
@@ -13,12 +12,19 @@ int TotalWeight, TotalScore;
 pair<int, int> edges[H];
 int perm[H];
 
-std::chrono::steady_clock::time_point ExecTimePoint;
-
 
 bool const DEBUG = false, TEST = false, ADVANCED = false;
-bool const UseEdgesDefaultSolution = true, UseEdgesHighDegreeSolution = true;
+bool const UseTestSolution = true;
 
+int const ExecTime = (DEBUG)? (1950) : (950);
+
+std::chrono::steady_clock::time_point ExecTimePoint;
+
+bool IsFindAnswer = false;
+
+int MnColor[N];
+long long MnWeight[N], ColorWeight[N][4];
+bool Used[N];
 
 int n, m, h;
 int ans[N];
@@ -43,13 +49,12 @@ int CalcScore(int *Colors)
     {
         for (int v : G[i])
         {
-            if (Colors[i] == Colors[v])
+            if (i < v && Colors[i] == Colors[v])
             {
                 WConf += Weight[i][v];
             }
         }
     }
-    WConf /= 2;
 
     int score = CalcScore(WConf);
 
@@ -90,6 +95,11 @@ void Output()
 
     if (DEBUG)
     {
+        cout << "time: " << chrono::duration_cast<chrono::milliseconds>(std::chrono::steady_clock::now() - ExecTimePoint + std::chrono::milliseconds(ExecTime)).count() << endl;
+        if (!IsFindAnswer)
+        {
+            cout << "WARNING! Answer was not found!" << endl;
+        }
         cout << "ANSWER RESULT: " << endl;
         CalcScore(ans);
     }
@@ -109,6 +119,7 @@ bool TrySetAns(int score, int *Colors = Color)
 {
     if (score > TotalScore)
     {
+        IsFindAnswer = true;
         TotalScore = score;
         for (int i = 0; i < n; ++i)
         {
@@ -120,105 +131,108 @@ bool TrySetAns(int score, int *Colors = Color)
     return false;
 }
 
-int SetSColor(int v1, int v2)
+int SetPrColor(int v1, int v2, int v3)
 {
-    int CurColorWeight[2][4] = {};
+    for (int i = 1; i < 4; i++)
+    {
+        ColorWeight[v1][i] = 0;
+        ColorWeight[v2][i] = 0;
+        ColorWeight[v3][i] = 0;
+    }
+
     for (int v : G[v1])
     {
-        if (v != v2)
+        if (v != v2 && v != v3)
         {
-            CurColorWeight[0][Color[v]] += Weight[v1][v];
+            ColorWeight[v1][Color[v]] += Weight[v1][v];
         }
     }
+
     for (int v : G[v2])
     {
-        if (v != v1)
+        if (v != v1 && v != v3)
         {
-            CurColorWeight[1][Color[v]] += Weight[v2][v];
+            ColorWeight[v2][Color[v]] += Weight[v2][v];
         }
     }
 
-    int cv1 = rand() % 3 + 1;
-    int cv2 = cv1;
+    for (int v : G[v3])
+    {
+        if (v != v1 && v != v2)
+        {
+            ColorWeight[v3][Color[v]] += Weight[v3][v];
+        }
+    }
 
-    CurColorWeight[0][0] = 0;
-    CurColorWeight[1][0] = 0;
-    int dif = CurColorWeight[0][cv1] + CurColorWeight[1][cv2] + ((cv1 == cv2 && cv1 != 0)? (Weight[v1][v2]) : (0)) - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
+    int cv1, cv2, cv3;
+    long long mn = 1e18;
+
+    for (int i = 1; i < 4; ++i)
+    {
+        for (int j = 1; j < 4; ++j)
+        {
+            for (int k = 1; k < 4; ++k)
+            {
+                int cur = ColorWeight[v1][i] + ColorWeight[v2][j] + ColorWeight[v3][k] + ((i == j)? (Weight[v1][v2]) : (0)) + ((i == k)? (Weight[v1][v3]) : (0)) + ((k == j)? (Weight[v2][v3]) : (0));
+                if (cur < mn)
+                {
+                    mn = cur;
+                    cv1 = i;
+                    cv2 = j;
+                    cv3 = k;
+                }
+            }
+        }
+    }
+
+    ColorWeight[v1][0] = 0;
+    ColorWeight[v2][0] = 0;
+    ColorWeight[v3][0] = 0;
+    int dif = mn - ColorWeight[v1][Color[v1]] - ColorWeight[v2][Color[v2]] - ColorWeight[v3][Color[v3]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0)) - ((Color[v1] == Color[v3] && Color[v3] != 0)? (Weight[v1][v3]) : (0)) - ((Color[v3] == Color[v2] && Color[v3] != 0)? (Weight[v3][v2]) : (0));
+
+    MnWeight[v1]= ColorWeight[v1][cv1];
+    MnWeight[v2]= ColorWeight[v2][cv2];
+    MnWeight[v3]= ColorWeight[v3][cv3];
 
     Color[v1] = cv1;
     Color[v2] = cv2;
-
-    if (DEBUG && ADVANCED)
-    {
-        cout << "COLOR SET: " << endl;
-        cout << v1 << ' ' << v2 << ' ' << Color[v1] << ' ' << Color[v2] << endl;
-    }
-
-    return dif;
-}
-
-int SetRColor(int v1, int v2)
-{
-    int CurColorWeight[2][4] = {};
-    for (int v : G[v1])
-    {
-        if (v != v2)
-        {
-            CurColorWeight[0][Color[v]] += Weight[v1][v];
-        }
-    }
-    for (int v : G[v2])
-    {
-        if (v != v1)
-        {
-            CurColorWeight[1][Color[v]] += Weight[v2][v];
-        }
-    }
-
-    int cv1 = (Color[v1])? (Color[v1]) : (rand() % 3 + 1);
-    int cv2 = (Color[v2])? (Color[v2]) : ((cv1 + rand() % 2) % 3 + 1);
-
-    CurColorWeight[0][0] = 0;
-    CurColorWeight[1][0] = 0;
-    int dif = CurColorWeight[0][cv1] + CurColorWeight[1][cv2] + ((cv1 == cv2 && cv1 != 0)? (Weight[v1][v2]) : (0)) - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
-
-    Color[v1] = cv1;
-    Color[v2] = cv2;
-
-    if (DEBUG && ADVANCED)
-    {
-        cout << "COLOR SET: " << endl;
-        cout << v1 << ' ' << v2 << ' ' << Color[v1] << ' ' << Color[v2] << endl;
-    }
+    Color[v3] = cv3;
 
     return dif;
 }
 
 int SetPrColor(int v1, int v2)
 {
-    int CurColorWeight[2][4] = {};
+    for (int i = 1; i < 4; i++)
+    {
+        ColorWeight[v1][i] = 0;
+        ColorWeight[v2][i] = 0;
+    }
+
     for (int v : G[v1])
     {
         if (v != v2)
         {
-            CurColorWeight[0][Color[v]] += Weight[v1][v];
+            ColorWeight[v1][Color[v]] += Weight[v1][v];
         }
     }
+
     for (int v : G[v2])
     {
         if (v != v1)
         {
-            CurColorWeight[1][Color[v]] += Weight[v2][v];
+            ColorWeight[v2][Color[v]] += Weight[v2][v];
         }
     }
 
-    int cv1, cv2, mn = 1e9;
+    int cv1, cv2;
+    long long mn = 1e18;
 
     for (int i = 1; i < 4; ++i)
     {
         for (int j = 1; j < 4; ++j)
         {
-            int cur = CurColorWeight[0][i] + CurColorWeight[1][j] + ((i == j)? (Weight[v1][v2]) : (0));
+            int cur = ColorWeight[v1][i] + ColorWeight[v2][j] + ((i == j)? (Weight[v1][v2]) : (0));
             if (cur < mn)
             {
                 mn = cur;
@@ -228,28 +242,15 @@ int SetPrColor(int v1, int v2)
         }
     }
 
-    CurColorWeight[0][0] = 0;
-    CurColorWeight[1][0] = 0;
-    int dif = CurColorWeight[0][cv1] + CurColorWeight[1][cv2] + ((cv1 == cv2)? (Weight[v1][v2]) : (0)) - CurColorWeight[0][Color[v1]] - CurColorWeight[1][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
+    ColorWeight[v1][0] = 0;
+    ColorWeight[v2][0] = 0;
+    int dif = ColorWeight[v1][cv1] + ColorWeight[v2][cv2] + ((cv1 == cv2)? (Weight[v1][v2]) : (0)) - ColorWeight[v1][Color[v1]] - ColorWeight[v2][Color[v2]] - ((Color[v1] == Color[v2] && Color[v1] != 0)? (Weight[v1][v2]) : (0));
+
+    MnWeight[v1]= ColorWeight[v1][cv1];
+    MnWeight[v2]= ColorWeight[v2][cv2];
 
     Color[v1] = cv1;
     Color[v2] = cv2;
-
-    return dif;
-}
-
-int SetColor(int v1, int cv1 = 0)
-{
-    int CurColorWeight[4] = {};
-    for (int v : G[v1])
-    {
-        CurColorWeight[Color[v]] += Weight[v1][v];
-    }
-
-    CurColorWeight[0] = 0;
-    int dif = CurColorWeight[cv1] - CurColorWeight[Color[v1]];
-
-    Color[v1] = cv1;
 
     return dif;
 }
@@ -285,62 +286,134 @@ void generatePerm()
     }
 }
 
-int getCostValue(int w)
+long long getCostValue(int v)
 {
-    //return ((long double)w / TotalWeight) * rand();
-    return rand();
+    //return mrand();
+    return (MnWeight[v] * 10000 + G[v].size()) * mrand();
 }
 
-void EdgesHighDegreeSolution(int len)
+long long getCost(int v)
 {
-    memset(Color, 0, sizeof(int) * n);
+    //return G[v].size();
 
-    int WConf = 0;
-
-    for (int l = 0; l < len; ++l)
+    if (Color[v])
     {
-        //generatePerm();
-        priority_queue<pair<int, int>> pr;
-
-        for (int i = 0; i < h; ++i)
-        {
-            pr.push({G[edges[i].first].size() + G[edges[i].second].size(), i});
-        }
-
-        for (int i = 0; i < h; ++i)
-        {
-            WConf += SetPrColor(edges[pr.top().second].first, edges[pr.top().second].second);
-            CheckTime();
-            pr.pop();
-        }
-
-        TrySetAns(CalcScore(WConf));
-
-        for (int i = n / 2; i >= 0; i--)
-        {
-            WConf += SetColor(rand() % n);
-        }
+        return ColorWeight[v][Color[v]] - MnWeight[v];
+    }
+    else
+    {
+        return 1e18 - MnWeight[v];
     }
 }
 
-void EdgesDefaultSolution()
+long long getCost(int v1, int v2)
 {
-    memset(Color, 0, sizeof(int) * n);
+    return (getCost(v1) + getCost(v2)) * mrand();
+    //return (getCost(v1) + getCost(v2)) * mrand();
+}
 
-    int WConf = 0;
+long long getCost(int v1, int v2, int v3)
+{
+    return (getCost(v1) + getCost(v2) + getCost(v3)) * mrand();
+    //return (getCost(v1) + getCost(v2)) * mrand();
+}
 
-    for (int l = 0; l < 2; ++l)
+    priority_queue<array<long long, 4>> pr; // max
+priority_queue<array<int, 2>> mpr;
+
+void TryPush(int v1, long long cost)
+{
+    if (!Used[v1])
     {
+        resizePerm(G[v1].size());
         generatePerm();
 
-        for (int i = 0; i < h; ++i)
+        if (G[v1].size() == 1)
         {
-            WConf += SetPrColor(edges[perm[i]].first, edges[perm[i]].second);
-            CheckTime();
+            pr.push({getCost(v1, G[v1][0]), v1, G[v1][0], -1});
+        }
+        else
+        {
+            for (int i = 1; i < G[v1].size(); i++)
+            {
+                pr.push({getCost(v1, G[v1][perm[i - 1]], G[v1][perm[i]]), v1, G[v1][perm[i - 1]], G[v1][perm[i]]});
+            }
+        }
+    }
+    //cout << v1 << '\n';
+}
+
+void TestSolution()
+{
+    //priority_queue<array<long long, 3>, vector<array<long long, 3>>, greater<array<long long, 3>>> pr; // min
+    //priority_queue<array<long long, 2>> mpr; // max
+
+    for (int i = 0; i < n; ++i)
+    {
+        Color[i] = 0;
+        Used[i] = false;
+
+        //for (int j = 1; j < 4; ++j)
+        //{
+        //    ColorWeight[i][j] = 0;
+        //}
+        MnWeight[i] = 0;
+    }
+
+    int s1 = mrand() % n, s2 = G[s1][mrand() % G[s1].size()];
+    if (G[s1].size() == 1)
+    {
+        pr.push({0, s1, s2, -1});
+    }
+    else
+    {
+        int s3;
+        do
+        {
+            s3 = G[s1][mrand() % G[s1].size()];
+        }
+        while (s3 == s2);
+
+        pr.push({0, s1, s2, s3});
+    }
+    int WConf = 0;
+
+    while (!pr.empty())
+    {
+        //cout << "ok" << '\n';
+        long long cost = pr.top()[0];
+        int v1 = pr.top()[1];
+        int v2 = pr.top()[2];
+        int v3 = pr.top()[3];
+        pr.pop();
+        if (v3 == -1)
+        {
+            WConf += SetPrColor(v1, v2);
+        }
+        else
+        {
+            WConf += SetPrColor(v1, v2, v3);
+            //cout << v3 << ' ' << cost << " v3Cost" << '\n';
+            TryPush(v3, cost);
+            Used[v3] = true;
         }
 
-        TrySetAns(CalcScore(WConf));
+        //cout << v1 << ' ' << cost << " Cost" << '\n';
+        //cout << "fun" << '\n';
+        TryPush(v1, cost);
+        //cout << "fun2" << '\n';
+        TryPush(v2, cost);
+        Used[v1] = true;
+        Used[v2] = true;
+        //cout << 2 << '\n';
+
+
+        CheckTime();
+        //cout << "ok2" << '\n';
     }
+
+    //cout << WConf << '\n';
+    TrySetAns(CalcScore(WConf));
 }
 
 int main()
@@ -355,21 +428,17 @@ int main()
     ExecTimePoint = std::chrono::steady_clock::now() + std::chrono::milliseconds(ExecTime); // setting a timer
 
     Input();
+
     for (int i = 0; i < n; ++i)
     {
-        ans[i] = rand() % 3 + 1;
+        ans[i] = mrand() % 3 + 1;
     }
 
-    if (UseEdgesHighDegreeSolution)
-    {
-        EdgesHighDegreeSolution(20);
-    }
-    if (UseEdgesDefaultSolution)
+    if (UseTestSolution)
     {
         while (true)
         {
-            resizePerm(h);
-            EdgesDefaultSolution();
+            TestSolution();
         }
     }
 
